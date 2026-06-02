@@ -9,7 +9,9 @@ export interface ParsedTask {
 }
 
 const TIME_RE = /⏰\s*(\d{2}:\d{2}(?:–\d{2}:\d{2})?)/;
-const DATE_RE = /📅\s*(\d{4}-\d{2}-\d{2})/;
+// Matches Dataview inline field format: [due:: YYYY-MM-DD]
+// Also matches legacy 📅 format for backwards compatibility
+const DATE_RE = /(?:\[due::\s*(\d{4}-\d{2}-\d{2})\]|📅\s*(\d{4}-\d{2}-\d{2}))/;
 
 // Zero-width space link: [​](gtasks://ID)  ← the space inside [] is U+200B
 const GCAL_RE = /(?:\[​\]\(gtasks:\/\/([^)]+)\)|<!--\s*gcal::([^\s]+)\s*-->|\[gcal::([^\]]+)\])/;
@@ -28,7 +30,7 @@ export function parseLine(line: string, lineIndex: number): ParsedTask | null {
   const gcalMatch = GCAL_RE.exec(body);
 
   const time = timeMatch ? timeMatch[1] : null;
-  const dueDate = dateMatch ? dateMatch[1] : null;
+  const dueDate = dateMatch ? (dateMatch[1] ?? dateMatch[2]) : null;
   const gcalId = gcalMatch ? (gcalMatch[1] ?? gcalMatch[2] ?? gcalMatch[3]) : null;
 
   // Strip all metadata markers from display title
@@ -38,6 +40,7 @@ export function parseLine(line: string, lineIndex: number): ParsedTask | null {
     .replace(DATE_RE, "")
     .replace(/[⏰📅]/g, "")
     .trim();
+
 
   return { raw: line, completed, title, time, dueDate, gcalId, lineIndex };
 }
@@ -58,7 +61,7 @@ export function buildTaskLine(
 ): string {
   const check = completed ? "x" : " ";
   const timePart = time ? ` ⏰ ${time}` : "";
-  const datePart = dueDate ? ` 📅 ${dueDate}` : "";
+  const datePart = dueDate ? ` [due:: ${dueDate}]` : "";
   // Zero-width space (U+200B) inside brackets makes the link invisible in Live Preview
   const idPart = gcalId ? ` [​](gtasks://${gcalId})` : "";
   return `- [${check}] ${title}${timePart}${datePart}${idPart}`;

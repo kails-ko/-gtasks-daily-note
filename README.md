@@ -1,5 +1,8 @@
 # GTasks Daily Note
 
+> [!WARNING]
+> This plugin is entirely vibe-coded and has not been reviewed or vetted by Obsidian. It is not listed in the Community Plugins directory. Use at your own risk, and always back up your vault.
+
 An Obsidian plugin for two-way sync between your daily notes and Google Tasks. Import tasks due today (and overdue tasks) into your daily note automatically, push new tasks from Obsidian to Google Tasks, and keep completion state in sync on both sides.
 
 ---
@@ -20,10 +23,17 @@ An Obsidian plugin for two-way sync between your daily notes and Google Tasks. I
 ## Task Format
 
 ```
-- [ ] Task title 📅 2026-06-01
-- [ ] Timed task ⏰ 09:00–10:00 📅 2026-06-01
-- [x] Completed task 📅 2026-06-01
+- [ ] Task title [due:: 2026-06-01]
+- [ ] Timed task ⏰ 09:00–10:00 [due:: 2026-06-01]
+- [x] Completed task [due:: 2026-06-01]
 ```
+
+The `[due:: YYYY-MM-DD]` format is a [Dataview](https://blacksmithgu.github.io/obsidian-dataview/) inline field, making your tasks automatically queryable. For example:
+
+~~~dataview
+TASK
+WHERE due = date(today) AND !completed
+~~~
 
 The Google Task ID is embedded invisibly as `[​](gtasks://ID)` — it powers two-way sync but is hidden in Live Preview mode.
 
