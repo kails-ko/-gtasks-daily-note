@@ -72,11 +72,11 @@ export class GoogleAuth {
       });
 
       this.server.listen(REDIRECT_PORT, "localhost", () => {
-        console.log(`[GTasks Daily Note] OAuth listener started on port ${REDIRECT_PORT}`);
+        console.log(`[GTask Daily Notes] OAuth listener started on port ${REDIRECT_PORT}`);
       });
 
       this.server.on("error", (err) => {
-        console.error(`[GTasks Daily Note] OAuth server error:`, err);
+        console.error(`[GTask Daily Notes] OAuth server error:`, err);
         done(() => reject(`Could not start local server on port ${REDIRECT_PORT}: ${err.message}`));
       });
 

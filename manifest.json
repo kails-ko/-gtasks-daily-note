@@ -1,6 +1,6 @@
 {
   "id": "task-manager",
-  "name": "GTasks Daily Note",
+  "name": "GTask Daily Notes",
   "version": "0.1.0",
   "minAppVersion": "1.4.0",
   "description": "Two-way sync between daily notes and Google Tasks.",

@@ -50,26 +50,57 @@ export class SyncManager {
     return null;
   }
 
+  // Find any past daily note that has this gcalId as an open (non-forwarded) task
+  // and rewrite it to [>] to mark it as rolled over.
+  private async markTaskForwardedInPastNotes(gcalId: string, beforeDate: string): Promise<void> {
+    const files = this.plugin.app.vault.getFiles();
+
+    // Collect daily note files dated before today, newest first
+    const pastNotes: { date: string; file: TFile }[] = [];
+    for (const file of files) {
+      const date = this.getDailyNoteDate(file);
+      if (date && date < beforeDate) {
+        pastNotes.push({ date, file });
+      }
+    }
+    pastNotes.sort((a, b) => b.date.localeCompare(a.date));
+
+    for (const { file } of pastNotes) {
+      const content = await this.plugin.app.vault.read(file);
+      const tasks = parseNote(content);
+      const task = tasks.find(
+        (t) => t.gcalId === gcalId && !t.completed && !t.forwarded
+      );
+      if (!task) continue;
+
+      // Replace - [ ] with - [>], preserving everything else on the line
+      const forwardedLine = task.raw.replace(/^(\s*-\s*)\[ \]/, "$1[>]");
+      const newContent = updateLineInContent(content, task.lineIndex, forwardedLine);
+      await this.plugin.app.vault.modify(file, newContent);
+      break; // only the most recent active instance needs marking
+    }
+  }
+
   // Pull Google Tasks due on `date` (defaults to today) into the daily note
   async importFromGoogle(date?: string): Promise<void> {
     const targetDate = date ?? this.todayString();
     const file = await this.getDailyNoteForDate(targetDate);
     if (!file) {
-      new Notice("GTasks Daily Note: Daily note not found.");
+      new Notice("GTask Daily Notes: Daily note not found.");
       return;
     }
 
     const { taskListId } = this.plugin.settings;
     const today = targetDate;
-    console.log("[GTasks Daily Note] fetching tasks for:", today, "list:", taskListId);
+    console.log("[GTask Daily Notes] fetching tasks for:", today, "list:", taskListId);
 
     let gTasks;
     try {
       gTasks = await this.plugin.api.listTasks(taskListId, today);
-      console.log("[GTasks Daily Note] fetched tasks:", JSON.stringify(gTasks));
+      console.log("[GTask Daily Notes] fetched tasks:", JSON.stringify(gTasks));
     } catch (e) {
-      console.error("[GTasks Daily Note] fetch error:", e);
-      new Notice(`GTasks Daily Note: Failed to fetch tasks — ${e}`);
+      console.error("[GTask Daily Notes] fetch error:", e);
+      new Notice(`GTask Daily Notes: Failed to fetch tasks — ${e}`);
       return;
     }
 
@@ -87,6 +118,12 @@ export class SyncManager {
       const time = timeMatch ? timeMatch[1] : null;
       const completed = gt.status === "completed";
       const dueDate = gt.due ? gt.due.slice(0, 10) : null;
+
+      // If this task is overdue, mark its previous daily note instance as forwarded
+      if (dueDate && dueDate < targetDate) {
+        await this.markTaskForwardedInPastNotes(gt.id, targetDate);
+      }
+
       newLines.push(buildTaskLine(gt.title, completed, time, dueDate, gt.id));
     }
 
@@ -103,10 +140,10 @@ export class SyncManager {
     }
 
     await this.plugin.app.vault.modify(file, content);
-    new Notice(`GTasks Daily Note: Imported ${newLines.length} task(s).`);
+    new Notice(`GTask Daily Notes: Imported ${newLines.length} task(s).`);
   }
 
-  // Push a single new task line (no gcalId) to Google Tasks
+  // Push new task lines (no gcalId, has due date) to Google Tasks
   async exportNewTasks(date?: string): Promise<void> {
     const targetDate = date ?? this.todayString();
     const file = await this.getDailyNoteForDate(targetDate);
@@ -120,6 +157,7 @@ export class SyncManager {
 
     for (const task of tasks) {
       if (task.gcalId) continue; // already synced
+      if (!task.dueDate) continue; // only push tasks with an explicit due date
 
       try {
         const gt = await this.plugin.api.createTask(
@@ -132,7 +170,7 @@ export class SyncManager {
         content = updateLineInContent(content, task.lineIndex, newLine);
         modified = true;
       } catch (e) {
-        new Notice(`GTasks Daily Note: Failed to push "${task.title}" — ${e}`);
+        new Notice(`GTask Daily Notes: Failed to push "${task.title}" — ${e}`);
       }
     }
 
@@ -146,7 +184,7 @@ export class SyncManager {
     const content = await this.plugin.app.vault.read(file);
     const lines = content.split("\n");
     const task = parseLine(lines[lineIndex], lineIndex);
-    if (!task || !task.gcalId) return;
+    if (!task || !task.gcalId || task.forwarded) return;
 
     const { taskListId } = this.plugin.settings;
     try {
@@ -156,7 +194,7 @@ export class SyncManager {
         await this.plugin.api.reopenTask(taskListId, task.gcalId);
       }
     } catch (e) {
-      new Notice(`GTasks Daily Note: Sync failed — ${e}`);
+      new Notice(`GTask Daily Notes: Sync failed — ${e}`);
     }
   }
 
@@ -169,7 +207,7 @@ export class SyncManager {
     const { taskListId } = this.plugin.settings;
     let content = await this.plugin.app.vault.read(file);
     const tasks = parseNote(content);
-    const syncedTasks = tasks.filter((t) => t.gcalId);
+    const syncedTasks = tasks.filter((t) => t.gcalId && !t.forwarded);
     if (syncedTasks.length === 0) return;
 
     let gTasks: import("./googleTasks").GTask[] = [];
