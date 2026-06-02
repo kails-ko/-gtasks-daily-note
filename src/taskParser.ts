@@ -1,6 +1,7 @@
 export interface ParsedTask {
   raw: string;
   completed: boolean;
+  forwarded: boolean;  // true if checkbox is [>] (rolled over to next day)
   title: string;
   time: string | null;    // "HH:MM–HH:MM" or null for all-day
   dueDate: string | null; // "YYYY-MM-DD"
@@ -9,20 +10,22 @@ export interface ParsedTask {
 }
 
 const TIME_RE = /⏰\s*(\d{2}:\d{2}(?:–\d{2}:\d{2})?)/;
-// Matches Dataview inline field format: [due:: YYYY-MM-DD]
-// Also matches legacy 📅 format for backwards compatibility
-const DATE_RE = /(?:\[due::\s*(\d{4}-\d{2}-\d{2})\]|📅\s*(\d{4}-\d{2}-\d{2}))/;
+// Matches 📅 YYYY-MM-DD (Tasks plugin format) and legacy [due:: YYYY-MM-DD] (Dataview)
+const DATE_RE = /(?:📅\s*(\d{4}-\d{2}-\d{2})|\[due::\s*(\d{4}-\d{2}-\d{2})\])/;
 
 // Zero-width space link: [​](gtasks://ID)  ← the space inside [] is U+200B
 const GCAL_RE = /(?:\[​\]\(gtasks:\/\/([^)]+)\)|<!--\s*gcal::([^\s]+)\s*-->|\[gcal::([^\]]+)\])/;
 
-const TASK_RE = /^(\s*)-\s*\[([ xX])\]\s+(.+)$/;
+// Matches [ ], [x], [X], and [>] (forwarded)
+const TASK_RE = /^(\s*)-\s*\[([ xX>])\]\s+(.+)$/;
 
 export function parseLine(line: string, lineIndex: number): ParsedTask | null {
   const taskMatch = TASK_RE.exec(line);
   if (!taskMatch) return null;
 
-  const completed = taskMatch[2].toLowerCase() === "x";
+  const marker = taskMatch[2];
+  const completed = marker.toLowerCase() === "x";
+  const forwarded = marker === ">";
   const body = taskMatch[3];
 
   const timeMatch = TIME_RE.exec(body);
@@ -41,8 +44,7 @@ export function parseLine(line: string, lineIndex: number): ParsedTask | null {
     .replace(/[⏰📅]/g, "")
     .trim();
 
-
-  return { raw: line, completed, title, time, dueDate, gcalId, lineIndex };
+  return { raw: line, completed, forwarded, title, time, dueDate, gcalId, lineIndex };
 }
 
 export function parseNote(content: string): ParsedTask[] {
@@ -61,7 +63,7 @@ export function buildTaskLine(
 ): string {
   const check = completed ? "x" : " ";
   const timePart = time ? ` ⏰ ${time}` : "";
-  const datePart = dueDate ? ` [due:: ${dueDate}]` : "";
+  const datePart = dueDate ? ` 📅 ${dueDate}` : "";
   // Zero-width space (U+200B) inside brackets makes the link invisible in Live Preview
   const idPart = gcalId ? ` [​](gtasks://${gcalId})` : "";
   return `- [${check}] ${title}${timePart}${datePart}${idPart}`;

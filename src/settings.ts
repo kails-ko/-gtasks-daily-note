@@ -41,7 +41,7 @@ export class TaskManagerSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "GTasks Daily Note" });
+    containerEl.createEl("h2", { text: "GTask Daily Notes" });
 
     // --- Google OAuth ---
     containerEl.createEl("h3", { text: "Google Account" });
