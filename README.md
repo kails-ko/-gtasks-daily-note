@@ -14,7 +14,7 @@ An Obsidian plugin for two-way sync between your daily notes and Google Tasks. I
 - **Push to Google Tasks** — write a task with a due date in Obsidian and it syncs to Google Tasks
 - **Two-way completion sync** — check off a task in Obsidian and it marks complete in Google Tasks, and vice versa
 - **Background polling** — configurable interval (default 5 min) keeps both sides in sync without manual action
-- **Invisible task IDs** — Google Task IDs are stored as HTML comments, invisible in all view modes and non-clickable
+- **Invisible task IDs** — Google Task IDs are stored as zero-width space links, invisible in Live Preview and Reading view
 - **Timed tasks** — add `⏰ HH:MM–HH:MM` to a task in Obsidian; the time is stored in the Google Task's notes field
 
 ---
@@ -30,7 +30,9 @@ Tasks use the [Tasks plugin](https://obsidian-tasks-group.github.io/obsidian-tas
 - [>] Rolled-over task 📅 2026-05-30
 ```
 
-The Google Task ID is embedded as an HTML comment `<!-- gtasks:ID -->` — invisible in all Obsidian view modes including Source, and non-clickable so it doesn't interfere with other plugins.
+The Google Task ID is embedded invisibly as `[​](gtasks://ID)` — it powers two-way sync but is hidden in Live Preview mode.
+
+> **Tip:** Use **Live Preview** editing mode (`Cmd+E`) to keep your notes clean. Source mode will show the raw ID link.
 
 ---
 
