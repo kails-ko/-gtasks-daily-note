@@ -1,0 +1,9 @@
+.task-manager-status-ok {
+  color: var(--color-green);
+  font-weight: 500;
+}
+
+.task-manager-status-err {
+  color: var(--color-red);
+  font-weight: 500;
+}
