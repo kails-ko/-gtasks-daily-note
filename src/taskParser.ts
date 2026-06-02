@@ -13,9 +13,8 @@ const TIME_RE = /⏰\s*(\d{2}:\d{2}(?:–\d{2}:\d{2})?)/;
 // Matches 📅 YYYY-MM-DD (Tasks plugin format) and legacy [due:: YYYY-MM-DD] (Dataview)
 const DATE_RE = /(?:📅\s*(\d{4}-\d{2}-\d{2})|\[due::\s*(\d{4}-\d{2}-\d{2})\])/;
 
-// HTML comment: <!-- gtasks:ID --> (current format)
-// Legacy formats still parsed for backwards compatibility
-const GCAL_RE = /(?:<!--\s*gtasks:([^\s]+)\s*-->|<!--\s*gcal::([^\s]+)\s*-->|\[​\]\(gtasks:\/\/([^)]+)\)|\[gcal::([^\]]+)\])/;
+// Zero-width space link: [​](gtasks://ID)  ← the space inside [] is U+200B
+const GCAL_RE = /(?:\[​\]\(gtasks:\/\/([^)]+)\)|<!--\s*gtasks:([^\s]+)\s*-->|<!--\s*gcal::([^\s]+)\s*-->|\[gcal::([^\]]+)\])/;
 
 // Matches [ ], [x], [X], and [>] (forwarded)
 const TASK_RE = /^(\s*)-\s*\[([ xX>])\]\s+(.+)$/;
@@ -65,8 +64,8 @@ export function buildTaskLine(
   const check = completed ? "x" : " ";
   const timePart = time ? ` ⏰ ${time}` : "";
   const datePart = dueDate ? ` 📅 ${dueDate}` : "";
-  // HTML comment is invisible in all Obsidian view modes and not clickable
-  const idPart = gcalId ? ` <!-- gtasks:${gcalId} -->` : "";
+  // Zero-width space (U+200B) inside brackets makes the link invisible in Live Preview
+  const idPart = gcalId ? ` [​](gtasks://${gcalId})` : "";
   return `- [${check}] ${title}${timePart}${datePart}${idPart}`;
 }
 
