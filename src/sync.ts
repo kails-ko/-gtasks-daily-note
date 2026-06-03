@@ -129,17 +129,21 @@ export class SyncManager {
 
     if (newLines.length === 0) return;
 
+    // Re-read the file right before writing to pick up any changes made by
+    // other plugins (e.g. GCal replacing {{gcal}}) that raced with our fetch.
+    const latestContent = await this.plugin.app.vault.read(file);
     const { sectionHeading } = this.plugin.settings;
-    if (content.includes(sectionHeading)) {
-      content = content.replace(
+    let updatedContent: string;
+    if (latestContent.includes(sectionHeading)) {
+      updatedContent = latestContent.replace(
         sectionHeading,
         `${sectionHeading}\n${newLines.join("\n")}`
       );
     } else {
-      content += `\n\n${sectionHeading}\n${newLines.join("\n")}`;
+      updatedContent = latestContent + `\n\n${sectionHeading}\n${newLines.join("\n")}`;
     }
 
-    await this.plugin.app.vault.modify(file, content);
+    await this.plugin.app.vault.modify(file, updatedContent);
     new Notice(`GTask Daily Notes: Imported ${newLines.length} task(s).`);
   }
 
