@@ -58,6 +58,21 @@ export default class TaskManagerPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "push-current-note-to-google",
+      name: "Push tasks from current note to Google Tasks",
+      callback: async () => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file) {
+          new Notice("GTask Daily Notes: No active note.");
+          return;
+        }
+        this.updateStatusBar("syncing");
+        await this.sync.exportTasksFromFile(file);
+        this.updateStatusBar("idle");
+      },
+    });
+
     // Auto-import when any daily note opens
     this.registerEvent(
       this.app.workspace.on("file-open", async (file) => {

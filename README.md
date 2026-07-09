@@ -12,6 +12,7 @@ An Obsidian plugin for two-way sync between your daily notes and Google Tasks. I
 - **Auto-import on open** — when you open a daily note, tasks due that day are pulled in automatically
 - **Overdue task rollover** — incomplete tasks from prior days are forwarded into today's note; the previous instance is marked `- [>]` so it appears only once across your vault
 - **Push to Google Tasks** — write a task with a due date in Obsidian and it syncs to Google Tasks
+- **Push from any note** — tasks with a due date in any open note (not just the daily note) can be pushed to Google Tasks on demand
 - **Two-way completion sync** — check off a task in Obsidian and it marks complete in Google Tasks, and vice versa
 - **Background polling** — configurable interval (default 5 min) keeps both sides in sync without manual action
 - **Invisible task IDs** — Google Task IDs are stored as zero-width space links, invisible in Live Preview and Reading view
@@ -102,7 +103,8 @@ After entering credentials, click **Connect** to authorize. Your browser will op
 |---|---|
 | `Sync now` | Import + export in one step |
 | `Import tasks from Google Tasks` | Pull today's tasks into the daily note |
-| `Push new tasks to Google Tasks` | Push unsynced tasks (with a due date) from the note to Google |
+| `Push new tasks to Google Tasks` | Push unsynced tasks (with a due date) from today's daily note to Google |
+| `Push tasks from current note to Google Tasks` | Push unsynced tasks (with a due date) from whatever note is currently open — daily note or not |
 
 Access all commands via `Cmd+P`.
 
@@ -127,7 +129,7 @@ Both structures are detected automatically.
 
 - **Google Tasks has no time field** — the Tasks API only supports a due date, not a start/end time. Times written in Obsidian (`⏰ HH:MM–HH:MM`) are stored in the task's notes field and displayed in Obsidian, but do not appear as timed blocks in Google Calendar.
 - Tasks show in Google Calendar as all-day chips on their due date.
-- **Tasks without a due date** are not pushed to Google Tasks. Only tasks with an explicit `📅 YYYY-MM-DD` date are exported.
+- **Tasks without a due date** are not pushed to Google Tasks. Only tasks with an explicit `📅 YYYY-MM-DD` date are exported. When pushing from a non-daily note, a task missing a due date shows a warning notice instead of failing silently.
 
 ---
 
