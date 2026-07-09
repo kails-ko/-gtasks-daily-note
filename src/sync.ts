@@ -183,6 +183,77 @@ export class SyncManager {
     }
   }
 
+  // Push tasks with an explicit due date from any note (not just the daily note) to Google Tasks.
+  // Unlike exportNewTasks, there's no note-date to fall back on, so a missing due date
+  // is a per-task warning rather than a silent skip.
+  async exportTasksFromFile(file: TFile): Promise<void> {
+    console.log("[GTask Daily Notes] exportTasksFromFile:", file.path);
+
+    if (!this.plugin.settings.accessToken) {
+      new Notice("GTask Daily Notes: Connect your Google account first.");
+      return;
+    }
+
+    const { taskListId } = this.plugin.settings;
+    let content = await this.plugin.app.vault.read(file);
+    const tasks = parseNote(content);
+    console.log("[GTask Daily Notes] parsed tasks:", JSON.stringify(tasks));
+
+    if (tasks.length === 0) {
+      new Notice("GTask Daily Notes: No checkbox tasks found in this note.");
+      return;
+    }
+
+    let modified = false;
+    let pushedCount = 0;
+    let skippedSynced = 0;
+    let skippedNoDate = 0;
+
+    for (const task of tasks) {
+      if (task.gcalId) {
+        skippedSynced++;
+        continue; // already synced
+      }
+      if (!task.dueDate) {
+        skippedNoDate++;
+        new Notice(`GTask Daily Notes: "${task.title}" has no due date — skipped.`);
+        continue;
+      }
+
+      try {
+        const gt = await this.plugin.api.createTask(
+          taskListId,
+          task.title,
+          task.dueDate,
+          task.time
+        );
+        const newLine = buildTaskLine(task.title, task.completed, task.time, task.dueDate, gt.id);
+        content = updateLineInContent(content, task.lineIndex, newLine);
+        modified = true;
+        pushedCount++;
+      } catch (e) {
+        console.error("[GTask Daily Notes] push error:", e);
+        new Notice(`GTask Daily Notes: Failed to push "${task.title}" — ${e}`);
+      }
+    }
+
+    if (modified) {
+      await this.plugin.app.vault.modify(file, content);
+    }
+
+    console.log("[GTask Daily Notes] pushed:", pushedCount, "skippedSynced:", skippedSynced, "skippedNoDate:", skippedNoDate);
+
+    if (pushedCount > 0) {
+      new Notice(`GTask Daily Notes: Pushed ${pushedCount} task(s) to Google Tasks.`);
+    } else if (skippedSynced === tasks.length) {
+      new Notice("GTask Daily Notes: All tasks in this note are already synced.");
+    } else if (skippedNoDate === tasks.length) {
+      // per-task notices already shown above
+    } else {
+      new Notice("GTask Daily Notes: Nothing to push.");
+    }
+  }
+
   // Called when a checkbox is toggled in the editor
   async onCheckboxToggle(file: TFile, lineIndex: number, completed: boolean): Promise<void> {
     const content = await this.plugin.app.vault.read(file);
